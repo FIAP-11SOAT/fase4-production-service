@@ -36,7 +36,7 @@ public class ProductionController {
     private final ProductionMapper mapper;
     private final SqsClient sqsClient;
     private final SqsProperties sqsProperties;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     @GetMapping
     public ResponseEntity<Page<ProductionResponse>> getAll(Pageable pageable) {
@@ -71,32 +71,44 @@ public class ProductionController {
         log.info("Processing queue messages, max messages: {}", maxMessages);
         
         try {
-            ReceiveMessageRequest request = ReceiveMessageRequest.builder()
-                    .queueUrl(sqsProperties.getOrderQueueUrl())
-                    .maxNumberOfMessages(Math.min(maxMessages, 10))
-                    .waitTimeSeconds(5)
-                    .visibilityTimeout(30)
-                    .build();
-
-            List<Message> messages = sqsClient.receiveMessage(request).messages();
-            int processedCount = 0;
-            
-            for (Message message : messages) {
-                try {
-                    processOrderMessage(message.body());
-                    deleteMessage(message);
-                    processedCount++;
-                    log.debug("Successfully processed message: {}", message.messageId());
-                } catch (Exception e) {
-                    log.error("Error processing message: {}", message.messageId(), e);
-                }
-            }
-            
+            int processedCount = processMessages(Math.min(maxMessages, 10));
             return ResponseEntity.ok(String.format("Processed %d messages from queue", processedCount));
         } catch (Exception e) {
             log.error("Error processing queue messages", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error processing queue: " + e.getMessage());
+        }
+    }
+
+    private int processMessages(int maxMessages) {
+        ReceiveMessageRequest request = ReceiveMessageRequest.builder()
+                .queueUrl(sqsProperties.getOrderQueueUrl())
+                .maxNumberOfMessages(maxMessages)
+                .waitTimeSeconds(5)
+                .visibilityTimeout(30)
+                .build();
+
+        List<Message> messages = sqsClient.receiveMessage(request).messages();
+        int processedCount = 0;
+        
+        for (Message message : messages) {
+            if (processAndDeleteMessage(message)) {
+                processedCount++;
+            }
+        }
+        
+        return processedCount;
+    }
+
+    private boolean processAndDeleteMessage(Message message) {
+        try {
+            processOrderMessage(message.body());
+            deleteMessage(message);
+            log.debug("Successfully processed message: {}", message.messageId());
+            return true;
+        } catch (Exception e) {
+            log.error("Error processing message: {}", message.messageId(), e);
+            return false;
         }
     }
 
@@ -108,27 +120,9 @@ public class ProductionController {
         log.info("Publishing status change for production {} to status: {}", id, request.getStatus());
         
         try {
-            Production production = repository.findById(id)
-                    .orElseThrow(() -> new ProductionNotFoundException(id));
-            
-            // Update production status
-            production.updateStatus(request.getStatus());
-            Production updated = repository.save(production);
-            
-            // Publish status change to queue
-            String json = objectMapper.writeValueAsString(
-                    java.util.Map.of(
-                            "productionId", updated.getId(),
-                            "orderId", updated.getOrderId(),
-                            "oldStatus", production.getStatus().getCode(),
-                            "newStatus", request.getStatus().getCode(),
-                            "updatedAt", Instant.now().toString()
-                    ));
-            
-            sqsClient.sendMessage(SendMessageRequest.builder()
-                    .queueUrl(sqsProperties.getProductionCompletedQueueUrl())
-                    .messageBody(json)
-                    .build());
+            Production production = findProductionById(id);
+            Production updated = updateProductionStatus(production, request.getStatus());
+            publishStatusChangeMessage(updated, production.getStatus());
             
             log.info("Published status change message for production: {}", id);
             return ResponseEntity.ok(String.format("Status updated to %s and message published", request.getStatus()));
@@ -142,29 +136,44 @@ public class ProductionController {
         }
     }
 
+    private Production findProductionById(String id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new ProductionNotFoundException(id));
+    }
+
+    private Production updateProductionStatus(Production production, ProductionStatus newStatus) {
+        production.updateStatus(newStatus);
+        return repository.save(production);
+    }
+
+    private void publishStatusChangeMessage(Production updated, ProductionStatus oldStatus) throws Exception {
+        String json = objectMapper.writeValueAsString(
+                java.util.Map.of(
+                        "productionId", updated.getId(),
+                        "orderId", updated.getOrderId(),
+                        "oldStatus", oldStatus.getCode(),
+                        "newStatus", updated.getStatus().getCode(),
+                        "updatedAt", Instant.now().toString()
+                ));
+        
+        sqsClient.sendMessage(SendMessageRequest.builder()
+                .queueUrl(sqsProperties.getProductionCompletedQueueUrl())
+                .messageBody(json)
+                .build());
+    }
+
     private void processOrderMessage(String body) {
         try {
             var node = objectMapper.readTree(body);
-            Long orderId = node.get("orderId").asLong();
+            Long orderId = extractOrderId(node);
             
             if (repository.existsByOrderId(orderId)) {
                 log.warn("Production already exists for order: {}", orderId);
                 return;
             }
 
-            var productIds = new java.util.ArrayList<Long>();
-            if (node.has("productIds") && node.get("productIds").isArray()) {
-                for (var p : node.get("productIds")) {
-                    productIds.add(p.asLong());
-                }
-            }
-            
-            Production production = Production.builder()
-                    .orderId(orderId)
-                    .productIds(productIds)
-                    .status(ProductionStatus.PREPARING)
-                    .startedAt(Instant.now())
-                    .build();
+            var productIds = extractProductIds(node);
+            Production production = createProduction(orderId, productIds);
             
             repository.save(production);
             log.info("Created production for order: {} with {} products", orderId, productIds.size());
@@ -173,6 +182,29 @@ public class ProductionController {
             log.error("Failed to process order message: {}", body, e);
             throw new RuntimeException("Failed to process order message", e);
         }
+    }
+
+    private Long extractOrderId(com.fasterxml.jackson.databind.JsonNode node) {
+        return node.get("orderId").asLong();
+    }
+
+    private java.util.List<Long> extractProductIds(com.fasterxml.jackson.databind.JsonNode node) {
+        var productIds = new java.util.ArrayList<Long>();
+        if (node.has("productIds") && node.get("productIds").isArray()) {
+            for (var productNode : node.get("productIds")) {
+                productIds.add(productNode.asLong());
+            }
+        }
+        return productIds;
+    }
+
+    private Production createProduction(Long orderId, java.util.List<Long> productIds) {
+        return Production.builder()
+                .orderId(orderId)
+                .productIds(productIds)
+                .status(ProductionStatus.PREPARING)
+                .startedAt(Instant.now())
+                .build();
     }
 
     private void deleteMessage(Message message) {
