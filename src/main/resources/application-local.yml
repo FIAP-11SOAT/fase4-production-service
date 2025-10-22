@@ -1,0 +1,58 @@
+# Application properties para ambiente local
+spring:
+  application:
+    name: production-service
+
+  data:
+    mongodb:
+      uri: mongodb://app_user:app_password@mongo:27017/productiondb?authSource=productiondb
+      database: productiondb
+
+aws:
+  sqs:
+    region: us-east-1
+    endpoint: http://localstack-main:4566
+    orderQueueUrl: http://localstack-main:4566/000000000000/order-confirmed
+    productionCompletedQueueUrl: http://localstack-main:4566/000000000000/production-completed
+    maxNumberOfMessages: 10
+    waitTimeSeconds: 5
+    visibilityTimeoutSeconds: 30
+    accessKey: test
+    secretKey: test
+
+  cognito:
+    # Desabilitado para testes locais
+    enabled: false
+    jwkSetUri: https://cognito-idp.us-east-1.amazonaws.com/dummy/.well-known/jwks.json
+    region: us-east-1
+
+production:
+  processing:
+    maxRetries: 3
+    retryDelayMs: 2000
+    enableAsync: true
+    threadPoolSize: 5
+  messaging:
+    enableDeadLetterQueue: true
+    maxReceiveCount: 3
+    messageRetentionPeriodSeconds: 1209600
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    root: INFO
+    com.example.production: DEBUG
+    org.springframework.web: DEBUG
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+server:
+  port: 8083

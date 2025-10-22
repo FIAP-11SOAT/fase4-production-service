@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+    <!-- 
+    Arquivo de supressão para falsos positivos do OWASP Dependency Check
+    Adicione aqui as CVEs que foram analisadas e consideradas não aplicáveis ao contexto
+    -->
+    
+    <!-- Exemplo de supressão
+    <suppress>
+        <notes><![CDATA[
+        CVE não aplicável ao contexto da aplicação
+        ]]></notes>
+        <cve>CVE-2023-XXXXX</cve>
+    </suppress>
+    -->
+</suppressions>

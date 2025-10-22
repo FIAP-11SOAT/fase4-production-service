@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: production-service
+
+  data:
+    mongodb:
+      uri: mongodb://mongo:27017/productiondb
+      database: productiondb
+
+aws:
+  sqs:
+    region: us-east-1
+    orderQueueUrl: http://localstack:4566/000000000000/order-confirmed
+    productionCompletedQueueUrl: http://localstack:4566/000000000000/production-completed
+    maxNumberOfMessages: 10
+    waitTimeSeconds: 20
+    visibilityTimeoutSeconds: 30
+
+  cognito:
+    jwkSetUri: https://cognito-idp.<region>.amazonaws.com/<user-pool-id>/.well-known/jwks.json
+    region: us-east-1
+
+production:
+  processing:
+    maxRetries: 3
+    retryDelayMs: 5000
+    enableAsync: true
+    threadPoolSize: 10
+  messaging:
+    enableDeadLetterQueue: true
+    maxReceiveCount: 3
+    messageRetentionPeriodSeconds: 1209600
+
+logging:
+  level:
+    root: INFO
+    com.example.production: DEBUG
+
+server:
+  port: 8083

@@ -1,0 +1,21 @@
+spring:
+  profiles:
+    active: test
+  data:
+    mongodb:
+      host: localhost
+      port: 27017
+      database: testdb
+      username: root
+      password: example
+  
+# Disable security for tests
+aws:
+  sqs:
+    enabled: false
+    
+# Test-specific configurations
+logging:
+  level:
+    com.example.production: DEBUG
+    org.springframework.security: DEBUG
