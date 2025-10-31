@@ -1,0 +1,67 @@
+spring:
+  application:
+    name: production-service
+
+# AWS Configuration
+aws:
+  region: ${AWS_DEFAULT_REGION:us-east-1}
+  
+  dynamodb:
+    endpoint: ${AWS_DYNAMODB_ENDPOINT:}
+    table-name: ${AWS_DYNAMODB_TABLE_NAME:production-service-production-productions}
+  
+  sqs:
+    endpoint: ${AWS_SQS_ENDPOINT:}
+    region: ${AWS_SQS_REGION:us-east-1}
+    orderQueueUrl: ${AWS_SQS_ORDER_QUEUE_URL:}
+    productionCompletedQueueUrl: ${AWS_SQS_PRODUCTION_COMPLETED_QUEUE_URL:}
+    dlqUrl: ${AWS_SQS_DLQ_URL:}
+    maxNumberOfMessages: ${AWS_SQS_MAX_NUMBER_OF_MESSAGES:10}
+    waitTimeSeconds: ${AWS_SQS_WAIT_TIME_SECONDS:20}
+    visibilityTimeoutSeconds: ${AWS_SQS_VISIBILITY_TIMEOUT_SECONDS:30}
+
+  cognito:
+    jwkSetUri: ${AWS_COGNITO_JWK_SET_URI:}
+    region: ${AWS_COGNITO_REGION:us-east-1}
+
+  ssm:
+    endpoint: ${AWS_SSM_ENDPOINT:}
+
+# Production Configuration
+production:
+  processing:
+    maxRetries: ${PRODUCTION_PROCESSING_MAX_RETRIES:3}
+    retryDelayMs: ${PRODUCTION_PROCESSING_RETRY_DELAY_MS:5000}
+    enableAsync: ${PRODUCTION_PROCESSING_ENABLE_ASYNC:true}
+    threadPoolSize: ${PRODUCTION_PROCESSING_THREAD_POOL_SIZE:10}
+  messaging:
+    enableDeadLetterQueue: ${PRODUCTION_MESSAGING_ENABLE_DEAD_LETTER_QUEUE:true}
+    maxReceiveCount: ${PRODUCTION_MESSAGING_MAX_RECEIVE_COUNT:3}
+    messageRetentionPeriodSeconds: ${PRODUCTION_MESSAGING_MESSAGE_RETENTION_PERIOD_SECONDS:1209600}
+
+# Logging Configuration
+logging:
+  level:
+    root: ${LOGGING_LEVEL_ROOT:INFO}
+    com.example.production: ${LOGGING_LEVEL_COM_EXAMPLE_PRODUCTION:INFO}
+    software.amazon.awssdk: WARN
+    software.amazon.awssdk.request: DEBUG
+
+# Server Configuration
+server:
+  port: ${SERVER_PORT:8083}
+  
+# Management/Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  health:
+    dynamodb:
+      enabled: true
+    sqs:
+      enabled: true

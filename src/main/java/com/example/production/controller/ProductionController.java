@@ -8,6 +8,7 @@ import com.example.production.mapper.ProductionMapper;
 import com.example.production.model.Production;
 import com.example.production.repository.ProductionRepository;
 import com.example.production.service.ProductionMessageHandler;
+import com.example.production.service.EventPublisherService;
 import com.example.production.config.properties.SqsProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import software.amazon.awssdk.services.sqs.SqsClient;
@@ -15,9 +16,6 @@ import software.amazon.awssdk.services.sqs.model.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -36,22 +34,17 @@ public class ProductionController {
     private final ProductionMapper mapper;
     private final SqsClient sqsClient;
     private final SqsProperties sqsProperties;
+    private final EventPublisherService eventPublisher;
     private final ObjectMapper objectMapper;
 
     @GetMapping
-    public ResponseEntity<Page<ProductionResponse>> getAll(Pageable pageable) {
-        log.debug("Fetching all productions with pagination: {}", pageable);
+    public ResponseEntity<List<ProductionResponse>> getAll() {
+        log.debug("Fetching all productions");
         
-        Page<Production> productionsPage = repository.findAll(pageable);
-        List<ProductionResponse> responseList = mapper.toResponseList(productionsPage.getContent());
+        List<Production> productions = repository.findAll();
+        List<ProductionResponse> responseList = mapper.toResponseList(productions);
         
-        Page<ProductionResponse> responsePage = new PageImpl<>(
-            responseList, 
-            pageable, 
-            productionsPage.getTotalElements()
-        );
-        
-        return ResponseEntity.ok(responsePage);
+        return ResponseEntity.ok(responseList);
     }
 
     @GetMapping("/stats/count-by-status")
@@ -82,7 +75,7 @@ public class ProductionController {
 
     private int processMessages(int maxMessages) {
         ReceiveMessageRequest request = ReceiveMessageRequest.builder()
-                .queueUrl(sqsProperties.getOrderQueueUrl())
+                .queueUrl(sqsProperties.getAwsSqsOrderQueueUrl())
                 .maxNumberOfMessages(maxMessages)
                 .waitTimeSeconds(5)
                 .visibilityTimeout(30)
@@ -147,19 +140,15 @@ public class ProductionController {
     }
 
     private void publishStatusChangeMessage(Production updated, ProductionStatus oldStatus) throws Exception {
-        String json = objectMapper.writeValueAsString(
-                java.util.Map.of(
-                        "productionId", updated.getId(),
-                        "orderId", updated.getOrderId(),
-                        "oldStatus", oldStatus.getCode(),
-                        "newStatus", updated.getStatus().getCode(),
-                        "updatedAt", Instant.now().toString()
-                ));
+        // Use the EventPublisherService for structured event publishing
+        if (updated.getStatus() == ProductionStatus.IN_PROGRESS) {
+            eventPublisher.publishProductionStartedEvent(updated);
+        } else if (updated.getStatus() == ProductionStatus.DONE) {
+            eventPublisher.publishProductionCompletedEvent(updated);
+        }
         
-        sqsClient.sendMessage(SendMessageRequest.builder()
-                .queueUrl(sqsProperties.getProductionCompletedQueueUrl())
-                .messageBody(json)
-                .build());
+        log.info("Published status change event for production: {} from {} to {}", 
+                updated.getId(), oldStatus, updated.getStatus());
     }
 
     private void processOrderMessage(String body) {
@@ -210,7 +199,7 @@ public class ProductionController {
     private void deleteMessage(Message message) {
         try {
             sqsClient.deleteMessage(DeleteMessageRequest.builder()
-                    .queueUrl(sqsProperties.getOrderQueueUrl())
+                    .queueUrl(sqsProperties.getAwsSqsOrderQueueUrl())
                     .receiptHandle(message.receiptHandle())
                     .build());
         } catch (Exception e) {

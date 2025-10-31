@@ -40,10 +40,10 @@ public class ProductionMessageHandler {
         while (true) {
             try {
                 ReceiveMessageRequest request = ReceiveMessageRequest.builder()
-                        .queueUrl(sqsProperties.getOrderQueueUrl())
-                        .maxNumberOfMessages(sqsProperties.getMaxNumberOfMessages())
-                        .waitTimeSeconds(sqsProperties.getWaitTimeSeconds())
-                        .visibilityTimeout(sqsProperties.getVisibilityTimeoutSeconds())
+                        .queueUrl(sqsProperties.getAwsSqsOrderQueueUrl())
+                        .maxNumberOfMessages(sqsProperties.getAwsSqsMaxNumberOfMessages())
+                        .waitTimeSeconds(sqsProperties.getAwsSqsWaitTimeSeconds())
+                        .visibilityTimeout(sqsProperties.getAwsSqsVisibilityTimeoutSeconds())
                         .build();
 
                 List<Message> messages = sqsClient.receiveMessage(request).messages();
@@ -70,7 +70,7 @@ public class ProductionMessageHandler {
     private void deleteMessage(Message message) {
         try {
             sqsClient.deleteMessage(DeleteMessageRequest.builder()
-                    .queueUrl(sqsProperties.getOrderQueueUrl())
+                    .queueUrl(sqsProperties.getAwsSqsOrderQueueUrl())
                     .receiptHandle(message.receiptHandle())
                     .build());
         } catch (Exception e) {
@@ -150,7 +150,7 @@ public class ProductionMessageHandler {
                     ));
             
             sqsClient.sendMessage(SendMessageRequest.builder()
-                    .queueUrl(sqsProperties.getProductionCompletedQueueUrl())
+                    .queueUrl(sqsProperties.getAwsSqsProductionCompletedQueueUrl())
                     .messageBody(json)
                     .build());
             

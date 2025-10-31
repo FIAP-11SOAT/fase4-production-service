@@ -25,7 +25,7 @@ public class CognitoSecurityConfig {
 
     @Bean
     public JwtDecoder jwtDecoder() {
-        String jwkSetUri = cognitoProperties.getJwkSetUri();
+        String jwkSetUri = cognitoProperties.getAwsCognitoJwkSetUri();
         log.info("Configuring security with JWT URI: {}", jwkSetUri);
         return NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
     }

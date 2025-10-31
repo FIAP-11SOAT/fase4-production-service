@@ -7,19 +7,19 @@ import org.springframework.validation.annotation.Validated;
 
 @Data
 @Validated
-@ConfigurationProperties(prefix = "aws.sqs")
+@ConfigurationProperties
 public class SqsProperties {
     
     @NotBlank(message = "Região AWS é obrigatória")
-    private String region = "us-east-1";
+    private String awsSqsRegion = "us-east-1";
     
     @NotBlank(message = "URL da fila de pedidos é obrigatória")
-    private String orderQueueUrl;
+    private String awsSqsOrderQueueUrl;
     
     @NotBlank(message = "URL da fila de produção completada é obrigatória")
-    private String productionCompletedQueueUrl;
+    private String awsSqsProductionCompletedQueueUrl;
     
-    private int maxNumberOfMessages = 10;
-    private int waitTimeSeconds = 20;
-    private int visibilityTimeoutSeconds = 30;
+    private int awsSqsMaxNumberOfMessages = 10;
+    private int awsSqsWaitTimeSeconds = 20;
+    private int awsSqsVisibilityTimeoutSeconds = 30;
 }

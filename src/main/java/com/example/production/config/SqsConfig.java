@@ -19,7 +19,7 @@ public class SqsConfig {
 
     @Bean
     public SqsClient sqsClient() {
-        Region region = Region.of(sqsProperties.getRegion());
+        Region region = Region.of(sqsProperties.getAwsSqsRegion());
         log.info("Creating SQS client for region: {}", region);
         
         return SqsClient.builder()

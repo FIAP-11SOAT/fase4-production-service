@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum ProductionStatus {
     PENDING("PENDING", "Aguardando processamento"),
+    PENDING_PAYMENT("PENDING_PAYMENT", "Aguardando pagamento"),
     NEW("NEW", "Nova produção criada"),
     PREPARING("PREPARING", "Em preparação"),
     IN_PROGRESS("IN_PROGRESS", "Em andamento"),
@@ -32,7 +33,8 @@ public enum ProductionStatus {
 
     public boolean canTransitionTo(ProductionStatus newStatus) {
         return switch (this) {
-            case PENDING -> newStatus == NEW || newStatus == PREPARING || newStatus == CANCELLED;
+            case PENDING -> newStatus == PENDING_PAYMENT || newStatus == NEW || newStatus == PREPARING || newStatus == CANCELLED;
+            case PENDING_PAYMENT -> newStatus == IN_PROGRESS || newStatus == CANCELLED;
             case NEW -> newStatus == PREPARING || newStatus == CANCELLED;
             case PREPARING -> newStatus == IN_PROGRESS || newStatus == ERROR || newStatus == CANCELLED;
             case IN_PROGRESS -> newStatus == DONE || newStatus == ERROR || newStatus == CANCELLED;

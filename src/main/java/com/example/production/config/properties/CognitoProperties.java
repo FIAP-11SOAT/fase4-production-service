@@ -7,13 +7,13 @@ import org.springframework.validation.annotation.Validated;
 
 @Data
 @Validated
-@ConfigurationProperties(prefix = "aws.cognito")
+@ConfigurationProperties
 public class CognitoProperties {
     
     @NotBlank(message = "URI do JWK Set é obrigatória")
-    private String jwkSetUri;
+    private String awsCognitoJwkSetUri;
     
-    private String userPoolId;
-    private String clientId;
-    private String region = "us-east-1";
+    private String awsCognitoUserPoolId;
+    private String awsCognitoClientId;
+    private String awsCognitoRegion = "us-east-1";
 }
