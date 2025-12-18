@@ -1,8 +1,10 @@
 package com.fiap.soat11.production.entity;
 
+import java.util.List;
 import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fiap.soat11.production.config.TableName;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -14,21 +16,22 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 @NoArgsConstructor
 @AllArgsConstructor
 @DynamoDbBean
+@TableName("fase4-production-service-table")
 public class Production {
     
-    private UUID id;
+    private String id;
     
     @JsonProperty("order_id")
-    private UUID orderID;
+    private String orderID;
 
     private String status;
 
     private Customer customer;
 
-    private OrderItem[] items;
+    private List<OrderItem> items;
     
     @DynamoDbPartitionKey
-    public UUID getId() {
+    public String getId() {
         return id;
     }
 }
