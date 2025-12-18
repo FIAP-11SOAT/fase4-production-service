@@ -24,7 +24,7 @@ import java.time.Instant;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/productions")
+@RequestMapping("/production")
 @RequiredArgsConstructor
 @Slf4j
 public class ProductionController {

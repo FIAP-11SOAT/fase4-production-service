@@ -8,6 +8,23 @@ spring:
       uri: mongodb://app_user:app_password@mongo:27017/productiondb?authSource=productiondb
       database: productiondb
 
+  cloud:
+    aws:
+      region:
+        static: us-east-1
+      credentials:
+        access-key: test
+        secret-key: test
+      endpoint: http://localstack-main:4566
+      sqs:
+        enabled: true
+        endpoint: http://localstack-main:4566
+      dynamodb:
+        enabled: true
+        endpoint: http://localstack-main:4566
+      parameterstore:
+        enabled: false
+
 aws:
   sqs:
     region: us-east-1

@@ -7,6 +7,14 @@ spring:
       uri: mongodb://mongo:27017/productiondb
       database: productiondb
 
+  cloud:
+    aws:
+      region:
+        static: us-east-1
+      credentials:
+        profile:
+          name: default
+
 aws:
   sqs:
     region: us-east-1
@@ -37,4 +45,4 @@ logging:
     com.example.production: DEBUG
 
 server:
-  port: 8083
+  port: 8080

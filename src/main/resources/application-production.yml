@@ -2,6 +2,21 @@ spring:
   application:
     name: production-service
 
+  cloud:
+    aws:
+      region:
+        static: ${AWS_DEFAULT_REGION:us-east-1}
+      credentials:
+        instance-profile: true
+      sqs:
+        enabled: true
+      dynamodb:
+        enabled: true
+      parameterstore:
+        enabled: true
+        prefix: /production-service/${spring.profiles.active:production}
+        profile-separator: _
+
 # AWS Configuration
 aws:
   region: ${AWS_DEFAULT_REGION:us-east-1}
