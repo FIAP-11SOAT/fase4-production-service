@@ -56,8 +56,9 @@ jobs:
       - name: Run SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+        run: mvn clean verify jacoco:report org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
           -Dsonar.projectKey=FIAP-11SOAT_fase4-production-service
           -Dsonar.organization=fiap-11soat
           -Dsonar.host.url=https://sonarcloud.io
           -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+          -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
