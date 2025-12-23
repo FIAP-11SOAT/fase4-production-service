@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import com.fiap.soat11.production.config.ProductionConstants;
+import com.fiap.soat11.production.dto.MetaDTO;
 import com.fiap.soat11.production.entity.Production;
 import com.fiap.soat11.production.exception.ProductionException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.awspring.cloud.sqs.operations.SqsTemplate;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
+import java.time.Instant;
 
 @Service
 public class ProductionProducerService {
@@ -75,15 +77,18 @@ public class ProductionProducerService {
     }
     
     /**
-     * Publica apenas o status na fila SQS
+     * Publica o Meta com o eventName correspondente ao status na fila SQS
      * 
      * @param production Production com o status a ser publicado
      */
     private void publishStatusMessage(Production production) {
         try {
-            // Criar um mapa com apenas o status
+            // Criar o MetaDTO com o eventName correspondente ao status
+            MetaDTO meta = createMetaFromStatus(production.getStatus());
+            
+            // Envolver o meta em um objeto com a propriedade "meta"
             java.util.Map<String, Object> payload = new java.util.HashMap<>();
-            payload.put("status", production.getStatus());
+            payload.put("meta", meta);
             
             // Converter para JSON
             String jsonMessage = objectMapper.writeValueAsString(payload);
@@ -91,11 +96,48 @@ public class ProductionProducerService {
             // Enviar para a fila SQS
             sqsTemplate.send(ProductionConstants.SQS_QUEUE_PRODUCER, jsonMessage);
             
-            logger.debug("Status enviado para SQS com conteúdo: {}", jsonMessage);
+            logger.debug("Meta enviado para SQS com conteúdo: {}", jsonMessage);
         } catch (Exception ex) {
             logger.error("Erro ao publicar status na fila: {}", ex.getMessage(), ex);
             throw new ProductionException("Erro ao publicar status na fila: " + ex.getMessage(), ex);
         }
+    }
+    
+    /**
+     * Cria um MetaDTO baseado no status fornecido
+     * 
+     * @param status O status da production
+     * @return MetaDTO com eventName correspondente
+     */
+    private MetaDTO createMetaFromStatus(String status) {
+        String eventName = mapStatusToEventName(status);
+        
+        MetaDTO meta = new MetaDTO();
+        meta.setEventId(java.util.UUID.randomUUID().toString());
+        meta.setEventDate(Instant.now().toString());
+        meta.setEventSource("production-service");
+        meta.setEventTarget("order-service");
+        meta.setEventName(eventName);
+        
+        return meta;
+    }
+    
+    /**
+     * Mapeia o status para o eventName correspondente
+     * 
+     * @param status O status da production
+     * @return O eventName correspondente
+     */
+    private String mapStatusToEventName(String status) {
+        if (status == null) {
+            throw new ProductionException("Status não pode ser nulo");
+        }
+        
+        return switch (status.toUpperCase()) {
+            case "STARTED" -> "production-started-event";
+            case "COMPLETED" -> "production-completed-event";
+            default -> throw new ProductionException("Status inválido: " + status);
+        };
     }
     
     public void sendProductionMessage(String message) {

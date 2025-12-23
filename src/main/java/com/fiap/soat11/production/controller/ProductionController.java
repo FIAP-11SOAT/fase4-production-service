@@ -16,7 +16,7 @@ import com.fiap.soat11.production.exception.ProductionException;
 import com.fiap.soat11.production.service.ProductionProducerService;
 
 @RestController
-@RequestMapping("/api/v1/productions")
+@RequestMapping("/production")
 public class ProductionController {
 
     private static final Logger logger = LoggerFactory.getLogger(ProductionController.class);
