@@ -27,30 +27,23 @@ public class ProductionController {
         this.productionProducerService = productionProducerService;
     }
 
-    /**
-     * Atualiza o status de uma Production e publica na fila SQS
-     * 
-     * @param productionId ID da Production a ser atualizada
-     * @param statusRequest Objeto com o novo status
-     * @return Production atualizada
-     */
     @PutMapping("/{productionId}/status")
     public ResponseEntity<?> updateProductionStatus(
             @PathVariable String productionId,
             @RequestBody StatusUpdateRequest statusRequest) {
-        
+
         try {
-            logger.info("Recebida requisição para atualizar status da Production: {} para: {}", 
-                       productionId, statusRequest.getStatus());
-            
+            logger.info("Recebida requisição para atualizar status da Production: {} para: {}",
+                    productionId, statusRequest.getStatus());
+
             Production updatedProduction = productionProducerService
-                .updateStatusAndPublish(productionId, statusRequest.getStatus());
-            
-            logger.info("Production {} atualizada com sucesso para status: {}", 
-                       productionId, statusRequest.getStatus());
-            
+                    .updateStatusAndPublish(productionId, statusRequest.getStatus());
+
+            logger.info("Production {} atualizada com sucesso para status: {}",
+                    productionId, statusRequest.getStatus());
+
             return ResponseEntity.ok(updatedProduction);
-            
+
         } catch (ProductionException ex) {
             logger.error("Erro ao atualizar Production: {}", ex.getMessage());
             ErrorResponse errorResponse = new ErrorResponse(ex.getMessage(), 404);

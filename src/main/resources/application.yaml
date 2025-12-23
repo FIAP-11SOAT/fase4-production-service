@@ -8,6 +8,6 @@ spring:
         dynamodb:
             region: us-east-1
   config:
-    import: "aws-secretsmanager:fase4-order-service-secrets"
+    import: "aws-secretsmanager:fase4-production-service-secrets"
   application:
     name: production

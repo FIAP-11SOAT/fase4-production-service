@@ -21,6 +21,7 @@ public class ProductionConsumerService {
     public ProductionConsumerService(DynamoDbTable<Production> dynamoDBClient) {
         this.dynamoDBClient = dynamoDBClient;
     }
+    
     public void handle(ConsumeDTO message) {
         try {
             logger.info("Processing message with order ID: {}", 
