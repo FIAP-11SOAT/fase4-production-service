@@ -33,14 +33,12 @@ public class ProductionController {
             @RequestBody StatusUpdateRequest statusRequest) {
 
         try {
-            logger.info("Recebida requisição para atualizar status da Production: {} para: {}",
-                    productionId, statusRequest.getStatus());
+            logger.debug("Recebida requisição para atualizar status da Production");
 
             Production updatedProduction = productionProducerService
                     .updateStatusAndPublish(productionId, statusRequest.getStatus());
 
-            logger.info("Production {} atualizada com sucesso para status: {}",
-                    productionId, statusRequest.getStatus());
+            logger.debug("Production atualizada com sucesso");
 
             return ResponseEntity.ok(updatedProduction);
 

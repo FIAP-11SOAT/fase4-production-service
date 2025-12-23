@@ -53,6 +53,10 @@ public class SecurityConfig {
                 )
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(STATELESS));
+        
+        // CSRF is safe to disable in stateless APIs with JWT authentication
+        // This application uses Bearer token authentication (OAuth2 JWT) and not session-based authentication,
+        // making CSRF protection unnecessary.
 
         return http.build();
     }

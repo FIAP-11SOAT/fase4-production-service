@@ -42,15 +42,14 @@ public class ProductionProducerService {
      */
     public Production updateStatusAndPublish(String productionId, String status) {
         try {
-            logger.info("Iniciando atualização de status para Production: {} com novo status: {}", 
-                       productionId, status);
+            logger.debug("Iniciando atualização de status para Production");
             
             // Buscar a Production atual pelo ID
             Key key = Key.builder().partitionValue(productionId).build();
             Production production = dynamoDBClient.getItem(key);
             
             if (production == null) {
-                logger.error("Production não encontrada com ID: {}", productionId);
+                logger.error("Production não encontrada");
                 throw new ProductionException("Production não encontrada com ID: " + productionId);
             }
             
@@ -60,11 +59,11 @@ public class ProductionProducerService {
             
             // Salvar no DynamoDB
             dynamoDBClient.putItem(production);
-            logger.info("Production atualizada no DynamoDB: {} com status: {}", productionId, status);
+            logger.debug("Production atualizada no DynamoDB");
             
             // Publicar apenas o status na fila SQS
             publishStatusMessage(production);
-            logger.info("Status publicado na fila SQS para Production: {}", productionId);
+            logger.debug("Status publicado na fila SQS");
             
             return production;
         } catch (ProductionException ex) {
