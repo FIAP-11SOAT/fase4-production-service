@@ -24,6 +24,9 @@ public class Production {
     private String orderID;
 
     private String status;
+    
+    @JsonProperty("updated_at")
+    private Long updatedAt;
 
     private Customer customer;
 
