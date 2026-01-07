@@ -191,4 +191,253 @@ class ProductionProducerServiceTest {
         assertNotNull(result.getCustomer());
         assertEquals("John Doe", result.getCustomer().getName());
     }
+
+    @Test
+    void testListPendingProductionsSuccess() {
+        // Arrange
+        Production prod1 = new Production();
+        prod1.setId("prod-1");
+        prod1.setStatus("RECEIVED");
+        prod1.setUpdatedAt(1000L);
+
+        Production prod2 = new Production();
+        prod2.setId("prod-2");
+        prod2.setStatus("IN_PROGRESS");
+        prod2.setUpdatedAt(2000L);
+
+        Production prod3 = new Production();
+        prod3.setId("prod-3");
+        prod3.setStatus("STARTED");
+        prod3.setUpdatedAt(1500L);
+
+        Production prod4 = new Production();
+        prod4.setId("prod-4");
+        prod4.setStatus("COMPLETED");
+        prod4.setUpdatedAt(3000L);
+
+        java.util.List<Production> allProductions = java.util.Arrays.asList(prod1, prod2, prod3, prod4);
+        
+        software.amazon.awssdk.enhanced.dynamodb.model.PageIterable<Production> mockPageIterable = 
+            mock(software.amazon.awssdk.enhanced.dynamodb.model.PageIterable.class);
+        software.amazon.awssdk.core.pagination.sync.SdkIterable<Production> mockSdkIterable =
+            mock(software.amazon.awssdk.core.pagination.sync.SdkIterable.class);
+        when(dynamoDBClient.scan()).thenReturn(mockPageIterable);
+        when(mockPageIterable.items()).thenReturn(mockSdkIterable);
+        when(mockSdkIterable.stream()).thenReturn(allProductions.stream());
+
+        // Act
+        java.util.List<Production> result = productionProducerService.listPendingProductions();
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(2, result.size());
+        assertEquals("prod-1", result.get(0).getId());
+        assertEquals("RECEIVED", result.get(0).getStatus());
+        assertEquals("prod-2", result.get(1).getId());
+        assertEquals("IN_PROGRESS", result.get(1).getStatus());
+        verify(dynamoDBClient, times(1)).scan();
+    }
+
+    @Test
+    void testListPendingProductionsOrderedByUpdatedAt() {
+        // Arrange
+        Production prod1 = new Production();
+        prod1.setId("prod-1");
+        prod1.setStatus("RECEIVED");
+        prod1.setUpdatedAt(3000L);
+
+        Production prod2 = new Production();
+        prod2.setId("prod-2");
+        prod2.setStatus("IN_PROGRESS");
+        prod2.setUpdatedAt(1000L);
+
+        Production prod3 = new Production();
+        prod3.setId("prod-3");
+        prod3.setStatus("PENDING");
+        prod3.setUpdatedAt(2000L);
+
+        java.util.List<Production> allProductions = java.util.Arrays.asList(prod1, prod2, prod3);
+        
+        software.amazon.awssdk.enhanced.dynamodb.model.PageIterable<Production> mockPageIterable = 
+            mock(software.amazon.awssdk.enhanced.dynamodb.model.PageIterable.class);
+        software.amazon.awssdk.core.pagination.sync.SdkIterable<Production> mockSdkIterable =
+            mock(software.amazon.awssdk.core.pagination.sync.SdkIterable.class);
+        when(dynamoDBClient.scan()).thenReturn(mockPageIterable);
+        when(mockPageIterable.items()).thenReturn(mockSdkIterable);
+        when(mockSdkIterable.stream()).thenReturn(allProductions.stream());
+
+        // Act
+        java.util.List<Production> result = productionProducerService.listPendingProductions();
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(3, result.size());
+        assertEquals(1000L, result.get(0).getUpdatedAt());
+        assertEquals(2000L, result.get(1).getUpdatedAt());
+        assertEquals(3000L, result.get(2).getUpdatedAt());
+    }
+
+    @Test
+    void testListPendingProductionsEmptyTable() {
+        // Arrange
+        software.amazon.awssdk.enhanced.dynamodb.model.PageIterable<Production> mockPageIterable = 
+            mock(software.amazon.awssdk.enhanced.dynamodb.model.PageIterable.class);
+        software.amazon.awssdk.core.pagination.sync.SdkIterable<Production> mockSdkIterable =
+            mock(software.amazon.awssdk.core.pagination.sync.SdkIterable.class);
+        when(dynamoDBClient.scan()).thenReturn(mockPageIterable);
+        when(mockPageIterable.items()).thenReturn(mockSdkIterable);
+        when(mockSdkIterable.stream()).thenReturn(java.util.stream.Stream.empty());
+
+        // Act
+        java.util.List<Production> result = productionProducerService.listPendingProductions();
+
+        // Assert
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+        verify(dynamoDBClient, times(1)).scan();
+    }
+
+    @Test
+    void testListPendingProductionsAllStartedOrCompleted() {
+        // Arrange
+        Production prod1 = new Production();
+        prod1.setId("prod-1");
+        prod1.setStatus("STARTED");
+        prod1.setUpdatedAt(1000L);
+
+        Production prod2 = new Production();
+        prod2.setId("prod-2");
+        prod2.setStatus("COMPLETED");
+        prod2.setUpdatedAt(2000L);
+
+        java.util.List<Production> allProductions = java.util.Arrays.asList(prod1, prod2);
+        
+        software.amazon.awssdk.enhanced.dynamodb.model.PageIterable<Production> mockPageIterable = 
+            mock(software.amazon.awssdk.enhanced.dynamodb.model.PageIterable.class);
+        software.amazon.awssdk.core.pagination.sync.SdkIterable<Production> mockSdkIterable =
+            mock(software.amazon.awssdk.core.pagination.sync.SdkIterable.class);
+        when(dynamoDBClient.scan()).thenReturn(mockPageIterable);
+        when(mockPageIterable.items()).thenReturn(mockSdkIterable);
+        when(mockSdkIterable.stream()).thenReturn(allProductions.stream());
+
+        // Act
+        java.util.List<Production> result = productionProducerService.listPendingProductions();
+
+        // Assert
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void testListPendingProductionsHandlesNullStatus() {
+        // Arrange
+        Production prod1 = new Production();
+        prod1.setId("prod-1");
+        prod1.setStatus(null);
+        prod1.setUpdatedAt(1000L);
+
+        Production prod2 = new Production();
+        prod2.setId("prod-2");
+        prod2.setStatus("RECEIVED");
+        prod2.setUpdatedAt(2000L);
+
+        java.util.List<Production> allProductions = java.util.Arrays.asList(prod1, prod2);
+        
+        software.amazon.awssdk.enhanced.dynamodb.model.PageIterable<Production> mockPageIterable = 
+            mock(software.amazon.awssdk.enhanced.dynamodb.model.PageIterable.class);
+        software.amazon.awssdk.core.pagination.sync.SdkIterable<Production> mockSdkIterable =
+            mock(software.amazon.awssdk.core.pagination.sync.SdkIterable.class);
+        when(dynamoDBClient.scan()).thenReturn(mockPageIterable);
+        when(mockPageIterable.items()).thenReturn(mockSdkIterable);
+        when(mockSdkIterable.stream()).thenReturn(allProductions.stream());
+
+        // Act
+        java.util.List<Production> result = productionProducerService.listPendingProductions();
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("prod-2", result.get(0).getId());
+    }
+
+    @Test
+    void testListPendingProductionsHandlesNullUpdatedAt() {
+        // Arrange
+        Production prod1 = new Production();
+        prod1.setId("prod-1");
+        prod1.setStatus("RECEIVED");
+        prod1.setUpdatedAt(null);
+
+        Production prod2 = new Production();
+        prod2.setId("prod-2");
+        prod2.setStatus("IN_PROGRESS");
+        prod2.setUpdatedAt(1000L);
+
+        java.util.List<Production> allProductions = java.util.Arrays.asList(prod1, prod2);
+        
+        software.amazon.awssdk.enhanced.dynamodb.model.PageIterable<Production> mockPageIterable = 
+            mock(software.amazon.awssdk.enhanced.dynamodb.model.PageIterable.class);
+        software.amazon.awssdk.core.pagination.sync.SdkIterable<Production> mockSdkIterable =
+            mock(software.amazon.awssdk.core.pagination.sync.SdkIterable.class);
+        when(dynamoDBClient.scan()).thenReturn(mockPageIterable);
+        when(mockPageIterable.items()).thenReturn(mockSdkIterable);
+        when(mockSdkIterable.stream()).thenReturn(allProductions.stream());
+
+        // Act
+        java.util.List<Production> result = productionProducerService.listPendingProductions();
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(2, result.size());
+        assertEquals("prod-1", result.get(0).getId());
+        assertEquals("prod-2", result.get(1).getId());
+    }
+
+    @Test
+    void testListPendingProductionsCaseInsensitiveStatus() {
+        // Arrange
+        Production prod1 = new Production();
+        prod1.setId("prod-1");
+        prod1.setStatus("started");
+        prod1.setUpdatedAt(1000L);
+
+        Production prod2 = new Production();
+        prod2.setId("prod-2");
+        prod2.setStatus("Completed");
+        prod2.setUpdatedAt(2000L);
+
+        Production prod3 = new Production();
+        prod3.setId("prod-3");
+        prod3.setStatus("RECEIVED");
+        prod3.setUpdatedAt(3000L);
+
+        java.util.List<Production> allProductions = java.util.Arrays.asList(prod1, prod2, prod3);
+        
+        software.amazon.awssdk.enhanced.dynamodb.model.PageIterable<Production> mockPageIterable = 
+            mock(software.amazon.awssdk.enhanced.dynamodb.model.PageIterable.class);
+        software.amazon.awssdk.core.pagination.sync.SdkIterable<Production> mockSdkIterable =
+            mock(software.amazon.awssdk.core.pagination.sync.SdkIterable.class);
+        when(dynamoDBClient.scan()).thenReturn(mockPageIterable);
+        when(mockPageIterable.items()).thenReturn(mockSdkIterable);
+        when(mockSdkIterable.stream()).thenReturn(allProductions.stream());
+
+        // Act
+        java.util.List<Production> result = productionProducerService.listPendingProductions();
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("prod-3", result.get(0).getId());
+    }
+
+    @Test
+    void testListPendingProductionsThrowsExceptionOnDatabaseError() {
+        // Arrange
+        when(dynamoDBClient.scan())
+            .thenThrow(new RuntimeException("Database connection error"));
+
+        // Act & Assert
+        assertThrows(ProductionException.class, () -> 
+            productionProducerService.listPendingProductions());
+    }
 }

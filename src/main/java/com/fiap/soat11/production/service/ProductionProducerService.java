@@ -155,4 +155,54 @@ public class ProductionProducerService {
     public void sendProductionMessage(String message) {
         // Logic to send message to the production queue
     }
+    
+    /**
+     * Lista todas as produções com status diferente de STARTED e COMPLETED,
+     * ordenadas pelo updatedAt (mais velhos primeiro)
+     * 
+     * @return Lista de produções filtradas e ordenadas
+     */
+    public java.util.List<Production> listPendingProductions() {
+        try {
+            logger.info("Listando produções com status diferente de STARTED e COMPLETED");
+            
+            // Escanear toda a tabela
+            java.util.List<Production> allProductions = dynamoDBClient.scan()
+                .items()
+                .stream()
+                .toList();
+            
+            logger.info("Total de produções encontradas no DynamoDB: {}", allProductions.size());
+            
+            // Log dos status encontrados
+            allProductions.forEach(p -> {
+                logger.info("Production ID: {}, Status: {}, UpdatedAt: {}", 
+                    p.getId(), p.getStatus(), p.getUpdatedAt());
+            });
+            
+            // Filtrar por status diferente de STARTED e COMPLETED
+            // e ordenar pelo updatedAt (mais velhos primeiro)
+            java.util.List<Production> filteredProductions = allProductions.stream()
+                .filter(p -> {
+                    boolean include = p.getStatus() != null && 
+                           !p.getStatus().equalsIgnoreCase("STARTED") && 
+                           !p.getStatus().equalsIgnoreCase("COMPLETED");
+                    logger.info("Production {} - Status: {} - Incluir: {}", 
+                        p.getId(), p.getStatus(), include);
+                    return include;
+                })
+                .sorted((p1, p2) -> {
+                    Long updated1 = p1.getUpdatedAt() != null ? p1.getUpdatedAt() : 0L;
+                    Long updated2 = p2.getUpdatedAt() != null ? p2.getUpdatedAt() : 0L;
+                    return updated1.compareTo(updated2);
+                })
+                .toList();
+            
+            logger.info("Total de produções filtradas: {}", filteredProductions.size());
+            return filteredProductions;
+        } catch (Exception ex) {
+            logger.error("Erro ao listar produções: {}", ex.getMessage(), ex);
+            throw new ProductionException("Erro ao listar produções: " + ex.getMessage(), ex);
+        }
+    }
 }

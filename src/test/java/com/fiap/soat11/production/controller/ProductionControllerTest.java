@@ -4,6 +4,10 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -163,5 +167,86 @@ class ProductionControllerTest {
         ErrorResponse errorResponse = (ErrorResponse) response.getBody();
         assertEquals(500, errorResponse.getStatus());
         assertTrue(errorResponse.getMessage().contains("Database error"));
+    }
+
+    @Test
+    void testListPendingProductionsSuccess() {
+        // Arrange
+        Production production1 = new Production();
+        production1.setId("prod-1");
+        production1.setStatus("RECEIVED");
+        production1.setUpdatedAt(1000L);
+
+        Production production2 = new Production();
+        production2.setId("prod-2");
+        production2.setStatus("IN_PROGRESS");
+        production2.setUpdatedAt(2000L);
+
+        java.util.List<Production> productionList = java.util.Arrays.asList(production1, production2);
+        
+        when(productionProducerService.listPendingProductions())
+            .thenReturn(productionList);
+
+        // Act
+        ResponseEntity<?> response = controller.listPendingProductions();
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(productionList, response.getBody());
+        verify(productionProducerService, times(1)).listPendingProductions();
+    }
+
+    @Test
+    void testListPendingProductionsEmptyList() {
+        // Arrange
+        when(productionProducerService.listPendingProductions())
+            .thenReturn(java.util.Collections.emptyList());
+
+        // Act
+        ResponseEntity<?> response = controller.listPendingProductions();
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertInstanceOf(java.util.List.class, response.getBody());
+        assertTrue(((java.util.List<?>) response.getBody()).isEmpty());
+        verify(productionProducerService, times(1)).listPendingProductions();
+    }
+
+    @Test
+    void testListPendingProductionsProductionException() {
+        // Arrange
+        when(productionProducerService.listPendingProductions())
+            .thenThrow(new ProductionException("Error listing productions"));
+
+        // Act
+        ResponseEntity<?> response = controller.listPendingProductions();
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertInstanceOf(ErrorResponse.class, response.getBody());
+        ErrorResponse errorResponse = (ErrorResponse) response.getBody();
+        assertEquals(500, errorResponse.getStatus());
+        assertTrue(errorResponse.getMessage().contains("Error listing productions"));
+    }
+
+    @Test
+    void testListPendingProductionsGenericException() {
+        // Arrange
+        when(productionProducerService.listPendingProductions())
+            .thenThrow(new RuntimeException("Unexpected error"));
+
+        // Act
+        ResponseEntity<?> response = controller.listPendingProductions();
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertInstanceOf(ErrorResponse.class, response.getBody());
+        ErrorResponse errorResponse = (ErrorResponse) response.getBody();
+        assertEquals(500, errorResponse.getStatus());
+        assertTrue(errorResponse.getMessage().contains("Unexpected error"));
     }
 }
