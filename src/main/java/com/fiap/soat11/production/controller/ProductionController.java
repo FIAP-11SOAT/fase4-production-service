@@ -6,7 +6,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -27,18 +26,16 @@ public class ProductionController {
         this.productionProducerService = productionProducerService;
     }
 
-    @PutMapping("/{productionId}/status")
-    public ResponseEntity<?> updateProductionStatus(
-            @PathVariable String productionId,
-            @RequestBody StatusUpdateRequest statusRequest) {
+    @PutMapping("/{productionId}/started")
+    public ResponseEntity<?> updateProductionStatusToStarted(@PathVariable String productionId) {
 
         try {
-            logger.debug("Recebida requisição para atualizar status da Production");
+            logger.debug("Recebida requisição para atualizar status da Production para STARTED");
 
             Production updatedProduction = productionProducerService
-                    .updateStatusAndPublish(productionId, statusRequest.getStatus());
+                    .updateStatusAndPublish(productionId, "STARTED");
 
-            logger.debug("Production atualizada com sucesso");
+            logger.debug("Production atualizada com sucesso para STARTED");
 
             return ResponseEntity.ok(updatedProduction);
 
@@ -53,22 +50,27 @@ public class ProductionController {
         }
     }
 
-    public static class StatusUpdateRequest {
-        private String status;
+    @PutMapping("/{productionId}/completed")
+    public ResponseEntity<?> updateProductionStatusToCompleted(@PathVariable String productionId) {
 
-        public StatusUpdateRequest() {
-        }
+        try {
+            logger.debug("Recebida requisição para atualizar status da Production para COMPLETED");
 
-        public StatusUpdateRequest(String status) {
-            this.status = status;
-        }
+            Production updatedProduction = productionProducerService
+                    .updateStatusAndPublish(productionId, "COMPLETED");
 
-        public String getStatus() {
-            return status;
-        }
+            logger.debug("Production atualizada com sucesso para COMPLETED");
 
-        public void setStatus(String status) {
-            this.status = status;
+            return ResponseEntity.ok(updatedProduction);
+
+        } catch (ProductionException ex) {
+            logger.error("Erro ao atualizar Production: {}", ex.getMessage());
+            ErrorResponse errorResponse = new ErrorResponse(ex.getMessage(), 404);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+        } catch (Exception ex) {
+            logger.error("Erro inesperado ao atualizar Production: {}", ex.getMessage(), ex);
+            ErrorResponse errorResponse = new ErrorResponse(ex.getMessage(), 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
 }

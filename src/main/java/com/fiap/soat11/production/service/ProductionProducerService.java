@@ -6,6 +6,9 @@ import org.springframework.stereotype.Service;
 
 import com.fiap.soat11.production.config.ProductionConstants;
 import com.fiap.soat11.production.dto.MetaDTO;
+import com.fiap.soat11.production.dto.PayloadWrapperDTO;
+import com.fiap.soat11.production.dto.ProductionMessageDTO;
+import com.fiap.soat11.production.dto.ProductionPayloadDTO;
 import com.fiap.soat11.production.entity.Production;
 import com.fiap.soat11.production.exception.ProductionException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -85,12 +88,22 @@ public class ProductionProducerService {
             // Criar o MetaDTO com o eventName correspondente ao status
             MetaDTO meta = createMetaFromStatus(production.getStatus());
             
-            // Envolver o meta em um objeto com a propriedade "meta"
-            java.util.Map<String, Object> payload = new java.util.HashMap<>();
-            payload.put("meta", meta);
+            // Criar o ProductionPayloadDTO com o order_id
+            ProductionPayloadDTO productionPayload = new ProductionPayloadDTO(production.getOrderID());
+            
+            // Criar o PayloadWrapperDTO
+            PayloadWrapperDTO payloadWrapper = new PayloadWrapperDTO(productionPayload);
+            
+            // Criar a mensagem completa com meta e payload
+            ProductionMessageDTO message = new ProductionMessageDTO(meta, payloadWrapper);
             
             // Converter para JSON
-            String jsonMessage = objectMapper.writeValueAsString(payload);
+            String jsonMessage = objectMapper.writeValueAsString(message);
+            
+            // Log da mensagem que será enviada
+            System.out.println("=== MENSAGEM ENVIADA PARA SQS ===");
+            System.out.println(jsonMessage);
+            System.out.println("=================================");
             
             // Enviar para a fila SQS
             sqsTemplate.send(ProductionConstants.SQS_QUEUE_PRODUCER, jsonMessage);

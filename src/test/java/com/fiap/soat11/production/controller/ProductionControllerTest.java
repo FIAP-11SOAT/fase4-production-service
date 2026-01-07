@@ -48,42 +48,53 @@ class ProductionControllerTest {
     }
 
     @Test
-    void testUpdateProductionStatusSuccess() {
+    void testUpdateProductionStatusToStartedSuccess() {
         // Arrange
         String productionId = "prod-123";
-        String newStatus = "STARTED";
-        testProduction.setStatus(newStatus);
+        testProduction.setStatus("STARTED");
         
-        when(productionProducerService.updateStatusAndPublish(productionId, newStatus))
+        when(productionProducerService.updateStatusAndPublish(productionId, "STARTED"))
             .thenReturn(testProduction);
 
-        ProductionController.StatusUpdateRequest request = 
-            new ProductionController.StatusUpdateRequest(newStatus);
-
         // Act
-        ResponseEntity<?> response = controller.updateProductionStatus(productionId, request);
+        ResponseEntity<?> response = controller.updateProductionStatusToStarted(productionId);
 
         // Assert
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(testProduction, response.getBody());
-        verify(productionProducerService, times(1)).updateStatusAndPublish(productionId, newStatus);
+        verify(productionProducerService, times(1)).updateStatusAndPublish(productionId, "STARTED");
     }
 
     @Test
-    void testUpdateProductionStatusNotFound() {
+    void testUpdateProductionStatusToCompletedSuccess() {
         // Arrange
         String productionId = "prod-123";
-        String newStatus = "STARTED";
+        testProduction.setStatus("COMPLETED");
         
-        when(productionProducerService.updateStatusAndPublish(productionId, newStatus))
-            .thenThrow(new ProductionException("Production not found"));
-
-        ProductionController.StatusUpdateRequest request = 
-            new ProductionController.StatusUpdateRequest(newStatus);
+        when(productionProducerService.updateStatusAndPublish(productionId, "COMPLETED"))
+            .thenReturn(testProduction);
 
         // Act
-        ResponseEntity<?> response = controller.updateProductionStatus(productionId, request);
+        ResponseEntity<?> response = controller.updateProductionStatusToCompleted(productionId);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(testProduction, response.getBody());
+        verify(productionProducerService, times(1)).updateStatusAndPublish(productionId, "COMPLETED");
+    }
+
+    @Test
+    void testUpdateProductionStatusToStartedNotFound() {
+        // Arrange
+        String productionId = "prod-123";
+        
+        when(productionProducerService.updateStatusAndPublish(productionId, "STARTED"))
+            .thenThrow(new ProductionException("Production not found"));
+
+        // Act
+        ResponseEntity<?> response = controller.updateProductionStatusToStarted(productionId);
 
         // Assert
         assertNotNull(response);
@@ -95,19 +106,35 @@ class ProductionControllerTest {
     }
 
     @Test
-    void testUpdateProductionStatusGenericException() {
+    void testUpdateProductionStatusToCompletedNotFound() {
         // Arrange
         String productionId = "prod-123";
-        String newStatus = "STARTED";
         
-        when(productionProducerService.updateStatusAndPublish(productionId, newStatus))
-            .thenThrow(new RuntimeException("Database error"));
-
-        ProductionController.StatusUpdateRequest request = 
-            new ProductionController.StatusUpdateRequest(newStatus);
+        when(productionProducerService.updateStatusAndPublish(productionId, "COMPLETED"))
+            .thenThrow(new ProductionException("Production not found"));
 
         // Act
-        ResponseEntity<?> response = controller.updateProductionStatus(productionId, request);
+        ResponseEntity<?> response = controller.updateProductionStatusToCompleted(productionId);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertInstanceOf(ErrorResponse.class, response.getBody());
+        ErrorResponse errorResponse = (ErrorResponse) response.getBody();
+        assertEquals(404, errorResponse.getStatus());
+        assertTrue(errorResponse.getMessage().contains("Production not found"));
+    }
+
+    @Test
+    void testUpdateProductionStatusToStartedGenericException() {
+        // Arrange
+        String productionId = "prod-123";
+        
+        when(productionProducerService.updateStatusAndPublish(productionId, "STARTED"))
+            .thenThrow(new RuntimeException("Database error"));
+
+        // Act
+        ResponseEntity<?> response = controller.updateProductionStatusToStarted(productionId);
 
         // Assert
         assertNotNull(response);
@@ -119,60 +146,22 @@ class ProductionControllerTest {
     }
 
     @Test
-    void testStatusUpdateRequest() {
-        // Test default constructor
-        ProductionController.StatusUpdateRequest request1 = new ProductionController.StatusUpdateRequest();
-        assertNull(request1.getStatus());
-
-        // Test constructor with status
-        ProductionController.StatusUpdateRequest request2 = 
-            new ProductionController.StatusUpdateRequest("COMPLETED");
-        assertEquals("COMPLETED", request2.getStatus());
-
-        // Test setStatus
-        request1.setStatus("STARTED");
-        assertEquals("STARTED", request1.getStatus());
-    }
-
-    @Test
-    void testUpdateProductionStatusMultipleTransitions() {
+    void testUpdateProductionStatusToCompletedGenericException() {
         // Arrange
         String productionId = "prod-123";
-        String[] statuses = {"STARTED", "IN_PROGRESS", "COMPLETED"};
         
-        for (String status : statuses) {
-            testProduction.setStatus(status);
-            when(productionProducerService.updateStatusAndPublish(productionId, status))
-                .thenReturn(testProduction);
-
-            // Act
-            ProductionController.StatusUpdateRequest request = 
-                new ProductionController.StatusUpdateRequest(status);
-            ResponseEntity<?> response = controller.updateProductionStatus(productionId, request);
-
-            // Assert
-            assertEquals(HttpStatus.OK, response.getStatusCode());
-            assertEquals(testProduction, response.getBody());
-        }
-    }
-
-    @Test
-    void testUpdateProductionStatusWithEmptyStatus() {
-        // Arrange
-        String productionId = "prod-123";
-        String newStatus = "";
-        
-        when(productionProducerService.updateStatusAndPublish(productionId, newStatus))
-            .thenReturn(testProduction);
-
-        ProductionController.StatusUpdateRequest request = 
-            new ProductionController.StatusUpdateRequest(newStatus);
+        when(productionProducerService.updateStatusAndPublish(productionId, "COMPLETED"))
+            .thenThrow(new RuntimeException("Database error"));
 
         // Act
-        ResponseEntity<?> response = controller.updateProductionStatus(productionId, request);
+        ResponseEntity<?> response = controller.updateProductionStatusToCompleted(productionId);
 
         // Assert
         assertNotNull(response);
-        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertInstanceOf(ErrorResponse.class, response.getBody());
+        ErrorResponse errorResponse = (ErrorResponse) response.getBody();
+        assertEquals(500, errorResponse.getStatus());
+        assertTrue(errorResponse.getMessage().contains("Database error"));
     }
 }
