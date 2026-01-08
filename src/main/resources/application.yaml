@@ -1,0 +1,13 @@
+spring:
+  cloud:
+    aws:
+        region:
+            static: us-east-1
+        sqs:
+            endpoint: https://sqs.us-east-1.amazonaws.com
+        dynamodb:
+            region: us-east-1
+  config:
+    import: "aws-secretsmanager:fase4-production-service-secrets"
+  application:
+    name: production
