@@ -63,7 +63,7 @@ jobs:
       - name: Build Flyway env vars from Secrets Manager
         run: |
           SECRET_JSON=$(aws secretsmanager get-secret-value \
-            --secret-id fase4-catalog-service-secrets \
+            --secret-id fase4-production-service-secrets \
             --query SecretString \
             --output text)
 
@@ -131,16 +131,16 @@ jobs:
       # ============================
       - name: Build Docker image
         run: |
-          ECR_URL="$AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/fase4-catalog-service-ecr"
-          docker build -t catalog-service .
-          docker tag catalog-service:latest "$ECR_URL:$IMAGE_TAG"
+          ECR_URL="$AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/fase4-production-service-ecr"
+          docker build -t production-service .
+          docker tag production-service:latest "$ECR_URL:$IMAGE_TAG"
 
       # ============================
       # 11. PUSH DOCKER
       # ============================
       - name: Push Docker image
         run: |
-          ECR_URL="$AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/fase4-catalog-service-ecr"
+          ECR_URL="$AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/fase4-production-service-ecr"
           docker push "$ECR_URL:$IMAGE_TAG"
 
       # ============================
@@ -162,5 +162,5 @@ jobs:
         run: |
           aws ecs update-service \
             --cluster fase4-infra-microservices-ecs-cluster \
-            --service fase4-catalog-service-service  \
+            --service fase4-production-service-service  \
             --force-new-deployment
