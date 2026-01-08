@@ -60,50 +60,6 @@ jobs:
         working-directory: deploy/terraform
         run: terraform apply -auto-approve
 
-      - name: Build Flyway env vars from Secrets Manager
-        run: |
-          SECRET_JSON=$(aws secretsmanager get-secret-value \
-            --secret-id fase4-production-service-secrets \
-            --query SecretString \
-            --output text)
-
-          JDBC_URL=$(echo "$SECRET_JSON" | jq -r '."spring.datasource.url"')
-          DB_USER=$(echo "$SECRET_JSON" | jq -r '."spring.datasource.username"')
-          DB_PASS=$(echo "$SECRET_JSON" | jq -r '."spring.datasource.password"')
-
-          echo "FLYWAY_URL=$JDBC_URL" >> $GITHUB_ENV
-          echo "FLYWAY_USER=$DB_USER" >> $GITHUB_ENV
-          echo "FLYWAY_PASSWORD=$DB_PASS" >> $GITHUB_ENV
-
-      - name: Set up JDK 21 (Flyway)
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '21'
-
-      - name: Install Flyway
-        run: |
-          curl -L https://download.red-gate.com/maven/release/com/redgate/flyway/flyway-commandline/11.19.0/flyway-commandline-11.19.0-linux-x64.tar.gz | tar xvz
-          sudo ln -s $PWD/flyway-11.19.0/flyway /usr/local/bin/flyway
-
-      - name: Run Flyway Migrations
-        run: |
-          flyway \
-            -url="$FLYWAY_URL" \
-            -user="$FLYWAY_USER" \
-            -password="$FLYWAY_PASSWORD" \
-            -locations=filesystem:src/main/resources/db/migrations/postgres \
-            migrate
-
-      - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '21'
-
       # ============================
       # 7. LOGIN NO ECR
       # (agora o repositório já existe)
