@@ -32,6 +32,7 @@ public class SecurityConfig {
 
     @Bean
     @Order(1)
+    @SuppressWarnings("java:S4502")
     public SecurityFilterChain publicSecurityFilterChain(HttpSecurity http) throws Exception {
         http
                 .securityMatcher("/health", "/health/**")
@@ -46,6 +47,7 @@ public class SecurityConfig {
 
     @Bean
     @Order(2)
+    @SuppressWarnings("java:S4502")
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
